@@ -16,6 +16,7 @@ python-dotenv = "*"
 jq = "*"
 jupyterthemes = "*"
 llama-cpp-python = "*"
+transformers = "*"
 
 [dev-packages]
 
