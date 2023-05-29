@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+langchain = "*"
+unstructured = "*"
+pandas = "*"
+chromadb = "*"
+tiktoken = "*"
+openai = "*"
+jupyter = "*"
+faiss-cpu = "*"
+python-dotenv = "*"
+jq = "*"
+jupyterthemes = "*"
+llama-cpp-python = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.11.3"
