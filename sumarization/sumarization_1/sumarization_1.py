@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 import os
-from utils import basic_sumarization_prompt, couple_of_paragraphs_summarization
+from utils import basic_sumarization_prompt, couple_of_paragraphs_summarization, map_reduce_summarization
 
 load_dotenv()
 
@@ -10,5 +10,8 @@ open_ai_key = os.getenv("OPENAI_API_KEY")
 # basic_sumarization_prompt(open_ai_key)
 
 # Sumarizing paragraphs
-couple_of_paragraphs_summarization(open_ai_key)
+# couple_of_paragraphs_summarization(open_ai_key)
+
+# Using map reduce technique to summarize large text and avoid issues with token limits
+map_reduce_summarization(open_ai_key)
 

@@ -1,5 +1,7 @@
 from langchain import OpenAI
 from langchain import PromptTemplate
+from langchain.chains.summarize import load_summarize_chain
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 import os
 
 def basic_sumarization_prompt(open_ai_api_key: str):
@@ -75,5 +77,60 @@ def couple_of_paragraphs_summarization(open_ai_api_key: str):
         print(f"summary: {summary.strip()}")
         print("\n")
 
+def map_reduce_summarization(openai_api_key: str):
 
+    """
+    If we have a text with multiple pages and we would like to summarize that, there is a chance that we will run into token limits, although this is not always the case nor it is a problem. 
+
+    Map reduce type chain is a method that allows to generate a summary of smaller chunks that fits into the token limits. And we can get a summary of the summaries
+    """
+
+    llm = OpenAI(temperature=0, openai_api_key=openai_api_key)
+
+    paul_graham_essay = f'{os.getcwd()}/data/PaulGrahamEssays/startupideas.txt'
+
+    with open(paul_graham_essay, 'r') as file:
+        essay = file.read()
+        num_of_tokens = llm.get_num_tokens(essay)
+
+        print(f"essay has {num_of_tokens} tokens")
+
+        text_splitter = RecursiveCharacterTextSplitter(separators=["\n\n", "\n"], chunk_size=10000, chunk_overlap=500)
+        docs = text_splitter.create_documents([essay])
+
+        num_docs = len(docs)
+        num_tokens_first_doc = llm.get_num_tokens(docs[0].page_content)
+
+        print(f"num_docs: {num_docs}")
+        print(f"num_tokens_first_doc: {num_tokens_first_doc}")
+
+        summary_chain = load_summarize_chain(llm=llm, chain_type='map_reduce')
+
+        output = summary_chain.run(docs)
+
+        print(f"output: {output}")
+
+        # Getting bullet points for the summary
+        map_prompt = """
+        Write a concise summary of the following:
+        "{text}"
+        CONCISE SUMMARY:
+        """
+
+        map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text"])
+
+        combine_prompt = """
+        Write a concise summary of the following text delimited by triple backquotes:
+        Return your response in bullet points which covers the key points of the text.
+        ```{text}```
+        BULLET POINT SUMMARY:
+        """
+
+        combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["text"])
+
+        summary_chain = load_summarize_chain(llm=llm, chain_type='map_reduce', map_prompt=map_prompt_template, combine_prompt=combine_prompt_template)
+
+        output2 = summary_chain.run(docs)
+
+        print(f"output2: {output2}")
     
