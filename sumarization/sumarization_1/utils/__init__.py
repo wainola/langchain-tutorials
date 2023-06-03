@@ -39,9 +39,22 @@ def basic_sumarization_prompt(open_ai_api_key: str):
 
 
 def couple_of_paragraphs_summarization(open_ai_api_key: str):
+    llm = OpenAI(temperature=0, openai_api_key=open_ai_api_key)
     paul_graham_essays = [f'{os.getcwd()}/data/PaulGrahamEssaySmall/getideas.txt', f'{os.getcwd()}/data/PaulGrahamEssaySmall/noob.txt']
 
     essays = []
+
+    #  We create a promtp template with the instructions for the model
+    template = """
+    Write a sone sentence summary of the following text:
+
+    {essay}
+    """
+
+    prompt = PromptTemplate(
+        template=template,
+        input_variables=["essay"]
+    )
 
     for file_name in paul_graham_essays:
         with open(file_name, 'r') as f:
@@ -51,5 +64,16 @@ def couple_of_paragraphs_summarization(open_ai_api_key: str):
     for i, essay in enumerate(essays):
         print(f"essay {i + 1}: {essay[:300]}\n")
 
-    #  We create a promtp template with the instructions for the model
+    for essay in essays:
+        summary_prompt = prompt.format(essay=essay)
+        num_tokens = llm.get_num_tokens(summary_prompt)
+
+        print(f'This prompt + essay has {num_tokens} tokens')
+
+        summary = llm(summary_prompt)
+
+        print(f"summary: {summary.strip()}")
+        print("\n")
+
+
     
