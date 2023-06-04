@@ -2,6 +2,7 @@ from langchain import OpenAI
 from langchain import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.document_loaders import PyPDFLoader
 import os
 
 def basic_sumarization_prompt(open_ai_api_key: str):
@@ -133,4 +134,49 @@ def map_reduce_summarization(openai_api_key: str):
         output2 = summary_chain.run(docs)
 
         print(f"output2: {output2}")
+
+def vector_summarization(openai_api_key: str):
+    """
+    The above functions we passed the entire document with more than 9k tokens. Vector summarization covers the use case when you have more than 9k tokens and you want to summarize it.
+    """
+
+    llm = OpenAI(temperature=0, openai_api_key=openai_api_key)
+
+    loader = PyPDFLoader(f'{os.getcwd()}/data/IntoThinAirBook.pdf')
+
+    pages = loader.load()
+
+    pages = pages[26:277]
+
+    text = ""
+
+    for page in pages:
+        text += page.page_content
     
+    text = text.replace("\t", " ")
+
+    num_tokens = llm.get_num_tokens(text)
+
+    print(f"num_tokens: {num_tokens}")
+    
+
+def vector_summarization2(openai_api_key: str):
+    """
+    This function is going to test the vector summarization on a smaller text
+    """
+
+    llm = OpenAI(temperature=0, openai_api_key=openai_api_key)
+    loader = PyPDFLoader(f'{os.getcwd()}/data/historia.pdf')
+
+    pages = loader.load()
+
+    text = ""
+
+    for page in pages:
+        text += page.page_content
+    
+    text = text.replace("\t", " ")
+
+    num_tokens = llm.get_num_tokens(text)
+    
+    print(f"num_tokens: {num_tokens}")

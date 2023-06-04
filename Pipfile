@@ -17,6 +17,7 @@ jq = "*"
 jupyterthemes = "*"
 llama-cpp-python = "*"
 transformers = "*"
+pypdf = "*"
 
 [dev-packages]
 
