@@ -17,4 +17,4 @@ open_ai_key = os.getenv("OPENAI_API_KEY")
 
 vector_summarization(open_ai_key)
 
-vector_summarization2(open_ai_key)
+# vector_summarization2(open_ai_key)

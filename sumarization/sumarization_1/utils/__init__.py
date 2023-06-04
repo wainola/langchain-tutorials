@@ -4,6 +4,14 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import PyPDFLoader
 import os
+from langchain.schema import Document
+from langchain.vectorstores import FAISS
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.chat_models import ChatOpenAI
+import numpy as np
+from sklearn.cluster import KMeans
+import time
+import json
 
 def basic_sumarization_prompt(open_ai_api_key: str):
     print("basic summarization prompt")
@@ -158,6 +166,119 @@ def vector_summarization(openai_api_key: str):
     num_tokens = llm.get_num_tokens(text)
 
     print(f"num_tokens: {num_tokens}")
+
+    """
+    Since the document is so large in terms of tokens the steps to get summarization over it are:
+    1- load the book into single text
+    2- split the text into large chunks
+    3- emmbed the chunks into vectors
+    4- cluster the vectors to see which chunks are similar and are talking about the same thing
+    5- pick the embeddings that represent the cluster the most
+    6- summarize the documents that this embeddings represent
+    """
+
+    text_splitter = RecursiveCharacterTextSplitter(separators=["\n\n", "\n", "\t"], chunk_size=10000, chunk_overlap=3000)
+
+    docs = text_splitter.create_documents([text])
+
+    num_documents = len(docs)
+
+    print(f"num_documents: {num_documents}")
+
+    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+    vectors = embeddings.embed_documents([x.page_content for x in docs])
+
+    num_clusters = 11
+
+    kmeans = KMeans(n_clusters=num_clusters, random_state=42).fit(vectors)
+
+    """
+    Now we are going to get the cluters that are more closer to the centroid (if we have plotted the vectors we would have seen that the centroid is the center of the cluster)
+    """
+
+    closest_indices = []
+
+    for i in range(num_clusters):
+        # Get the list of distances from that particular cluster center
+        distances = np.linalg.norm(vectors - kmeans.cluster_centers_[i], axis=1)
+
+        # find the list position of the closest one
+        closest_index = np.argmin(distances)
+
+        #  append that position to your closest indices list
+        closest_indices.append(closest_index)
+
+        # now we sort them so the chunks are proccessed in order
+        selected_indices = sorted(closest_indices)
+
+    llm3 = ChatOpenAI(temperature=0, openai_api_key=openai_api_key, max_tokens=1000, model='gpt-3.5-turbo')
+
+    map_prompt = """
+    You will be given a single passage of a book. This section will be enclosed in triple backticks (```)
+    Your goal is to give a summary of this section so that a reader will have a full understanding of what happened.
+    Your response should be at least three paragraphs and fully encompass what was said in the passage.
+
+    ```{text}```
+    FULL SUMMARY:
+    """
+
+    map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text"])
+
+    map_chain = load_summarize_chain(llm=llm3,
+                            chain_type="stuff",
+                            prompt=map_prompt_template)
+
+    selected_docs = [docs[doc] for doc in selected_indices]
+
+    summary_list = []
+
+    for i, doc in enumerate(selected_docs):
+        #  get the summary of the chunk
+        chunk_summmary = map_chain.run([doc])
+        # append the summary to the list
+        summary_list.append(chunk_summmary)
+        #  print the summary
+
+        print("Going to sleep for 30 seconds \n")
+
+        time.sleep(30)
+        print(f"Summary #{i} (chunk selected {selected_indices[i]}) - Preview: {chunk_summmary[:250]} \n")
+
+    summaries = "\n".join(summary_list)
+
+    # We converted back to a document
+    final_summary = Document(page_content=summaries)
+
+    print(f"final_summary has: {llm.get_num_tokens(final_summary.page_content)} tokens")
+
+    llm4 = ChatOpenAI(temperature=0,
+                openai_api_key=openai_api_key,
+                max_tokens=3000,
+                model='gpt-3.5-turbo',
+                request_timeout=120
+            )
+    
+    combine_prompt = """
+    You will be given a series of summaries from a book. The summaries will be enclosed in triple backticks (```)
+    Your goal is to give a verbose summary of what happened in the story.
+    The reader should be able to grasp what happened in the book.
+
+    ```{text}```
+    VERBOSE SUMMARY:
+    """
+    combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["text"])
+
+    reduce_chain = load_summarize_chain(llm=llm4,
+                            chain_type="stuff",
+                            prompt=combine_prompt_template,
+#                              verbose=True # Set this to true if you want to see the inner workings
+                                )
+    print("Going to sleep 60 seconds \n")
+    time.sleep(60)
+    print("Resume operation... \n")
+    output = reduce_chain.run([final_summary])
+
+    print(f"output: {output}")
     
 
 def vector_summarization2(openai_api_key: str):

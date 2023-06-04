@@ -18,6 +18,8 @@ jupyterthemes = "*"
 llama-cpp-python = "*"
 transformers = "*"
 pypdf = "*"
+numpy = "*"
+scikit-learn = "*"
 
 [dev-packages]
 
